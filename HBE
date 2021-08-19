@@ -1,0 +1,66 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+function hitboxExtender:Off()
+    if hitboxExtender.PlayerAdded then
+        hitboxExtender.PlayerAdded:Disconnect()
+        hitboxExtender.PlayerAdded = nil
+    end
+    for _, added in pairs(hitboxExtender.CharacterAdded) do
+        added:Disconnect()
+    end
+    for _,func in pairs(hitboxExtender.DiedBinds) do
+        func:Disconnect()
+    end
+    for _, proxy in pairs(hitboxExtender.Parts) do
+        proxy:Destroy()
+    end
+    hitboxExtender.Parts = {}
+    hitboxExtender.DiedBinds = {}
+end
+
+function hitboxExtender:On()
+
+    local function createHitbox(player)
+        if player == gg.client then
+            return
+        end
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        local humanoid = character:WaitForChild("Humanoid")
+
+        local proxy = gg.proxyPart.new()
+        proxy:Link(humanoidRootPart)
+        proxy:SetSize(Vector3.new(self.Size, self.Size, self.Size))
+        proxy:CreateOutline()
+
+        proxy:BindTouch(function(part)
+            gg.kopis.damage(humanoid, part, .66)
+        end)
+
+        local deathBind = humanoid.Died:Connect(function()
+            proxy:Destroy()
+        end)
+
+        table.insert(hitboxExtender.DiedBinds, deathBind)
+
+        table.insert(hitboxExtender.Parts, proxy)
+    end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        createHitbox(player)
+        local added = player.CharacterAdded:Connect(function()
+            createHitbox(player)
+        end)
+        table.insert(hitboxExtender.CharacterAdded, added)
+    end
+
+    hitboxExtender.PlayerAdded = Players.PlayerAdded:connect(function(player)
+        createHitbox(player)
+        local added = player.CharacterAdded:Connect(function()
+            createHitbox(player)
+        end)
+        table.insert(hitboxExtender.CharacterAdded, added)
+    end)
+end
